@@ -54,7 +54,7 @@ I use the camera calibration matrix (mtx) and distortion coefficients (dist) to 
 
 #### 2. Perspective Transformation
 
-The code for my perspective transform includes a function called `warper()`, which appears in from line 28 to line 54 the script `lane_line_detector.py` (output_images/examples/example.py)
+The code for my perspective transform from line 28 to line 54 the script `lane_line_detector.py` (output_images/examples/example.py)
 
 I chose the hardcode the source and destination points in the following manner:
 
