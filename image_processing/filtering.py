@@ -61,3 +61,31 @@ def hsv(img):
 
     hsv_image = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     return hsv_image
+
+
+def thresholding_on_color(img):
+    hsv_img = hsv(img)
+    thresholding_on_yellow = cv2.inRange(
+        hsv_img, (15, 100, 100), (30, 255, 255))
+    thresholding_on_white = cv2.inRange(img, (200, 200, 200), (255, 255, 255))
+
+    combined_result = np.zeros_like(hsv_img[:, :, 0])
+    combined_result[(thresholding_on_yellow > 0) |
+                    (thresholding_on_white > 0)] = 1
+    return combined_result
+
+
+def preprocess_single_image(img):
+    assert(img.ndim == 3)
+    hls_image = hls(img)
+    s_channel = hls_image[:, :, 2]
+    thresholded_on_color = thresholding_on_color(img)
+
+    thresholded_sobel_x = abs_sobel_thresh(
+        s_channel, orient='x', thresh_min=15, thresh_max=100)
+
+    thresholded_binary_image = np.zeros_like(s_channel)
+    thresholded_binary_image[(thresholded_sobel_x == 1)
+                             | (thresholded_on_color == 1)] = 1
+
+    return thresholded_binary_image

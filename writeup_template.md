@@ -1,12 +1,8 @@
-## Writeup Template
+# Advanced Lane Finding Project #
+[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-### You can use this file as a template for your writeup if you want to submit it as a markdown file, but feel free to use some other method and submit a pdf if you prefer.
 
----
-
-**Advanced Lane Finding Project**
-
-The goals / steps of this project are the following:
+## The goals of the project ##
 
 * Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
 * Apply a distortion correction to raw images.
@@ -17,111 +13,170 @@ The goals / steps of this project are the following:
 * Warp the detected lane boundaries back onto the original image.
 * Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
 
-[//]: # (Image References)
+## Main Project Structure ##
 
-[image1]: ./examples/undistort_output.png "Undistorted"
-[image2]: ./test_images/test1.jpg "Road Transformed"
-[image3]: ./examples/binary_combo_example.jpg "Binary Example"
-[image4]: ./examples/warped_straight_lines.jpg "Warp Example"
-[image5]: ./examples/color_fit_lines.jpg "Fit Visual"
-[image6]: ./examples/example_output.jpg "Output"
-[video1]: ./project_video.mp4 "Video"
+- [image_processing modules](./image_processing): python module for preprocessing method of images, such as thresholding
+- [lane_line_detector.py](./lane_line_detector.py): implementation of LaneLineDetector class
+- [notebooks/lane_detection_pipeline.ipynb](./notebooks/lane_detection_pipeline.ipynb): jupyter notebook to show processes of detecting lane lines using image_processing modules and LaneLineDetector
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
-
-### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
 
 ---
 
 ### Writeup / README
 
-#### 1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  [Here](https://github.com/udacity/CarND-Advanced-Lane-Lines/blob/master/writeup_template.md) is a template writeup for this project you can use as a guide and a starting point.  
-
-You're reading it!
-
 ### Camera Calibration
 
-#### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
+The code for this step is contained in the third code cell of the IPython notebook located in [notebooks/lane_detection_pipeline.ipynb](./notebooks/lane_detection_pipeline.ipynb).
+The main steps for camera calibration are as following:
+- convert the BGR image (read by cv2) to gray scale
+- prepare object points, which will be the (x, y, z) coordinates of the chessboard corners in the world.
+- find chessboard corners, use the detected corners as image points
+- use object points and image points to compute the camera calibration matrix and the distortion coefficients
+- apply the values of camera calibration matrix and the distortion coefficients to undistort original image
 
-The code for this step is contained in the first code cell of the IPython notebook located in "./examples/example.ipynb" (or in lines # through # of the file called `some_file.py`).  
+The following two images are the result of undistortion, with the image on the left is the original chessboard image and the image on the right is undistorted chessboard image.
 
-I start by preparing "object points", which will be the (x, y, z) coordinates of the chessboard corners in the world. Here I am assuming the chessboard is fixed on the (x, y) plane at z=0, such that the object points are the same for each calibration image.  Thus, `objp` is just a replicated array of coordinates, and `objpoints` will be appended with a copy of it every time I successfully detect all chessboard corners in a test image.  `imgpoints` will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
-
-I then used the output `objpoints` and `imgpoints` to compute the camera calibration and distortion coefficients using the `cv2.calibrateCamera()` function.  I applied this distortion correction to the test image using the `cv2.undistort()` function and obtained this result: 
-
-![alt text][image1]
+<p float="center">
+  <img src="./output_images/chessboard_original.jpg" width="300" />
+  <img src="./output_images/chessboard_undistorted.jpg" width="300" />
+</p>
 
 ### Pipeline (single images)
 
-#### 1. Provide an example of a distortion-corrected image.
+#### 1. An example of a distortion-corrected image.
 
-To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
-![alt text][image2]
+I use the camera calibration matrix (mtx) and distortion coefficients (dist) to apply the distortion correction to one of the test images like this one:
+<p float="center">
+  <img src="./test_images/straight_lines1.jpg" width="300" />
+  <img src="./output_images/undistorted_img_straight_lines1.jpg" width="300" />
+</p>
 
-#### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
+#### 2. Perspective Transformation
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+The code for my perspective transform includes a function called `warper()`, which appears in from line 28 to line 54 the script `lane_line_detector.py` (output_images/examples/example.py)
 
-![alt text][image3]
-
-#### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
-
-The code for my perspective transform includes a function called `warper()`, which appears in lines 1 through 8 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+I chose the hardcode the source and destination points in the following manner:
 
 ```python
-src = np.float32(
-    [[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
-    [((img_size[0] / 6) - 10), img_size[1]],
-    [(img_size[0] * 5 / 6) + 60, img_size[1]],
-    [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
-dst = np.float32(
-    [[(img_size[0] / 4), 0],
-    [(img_size[0] / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), 0]])
+self.HEIGHT = self.img.shape[0]
+self.WIDTH = self.img.shape[1]
+
+self.__src = src = np.float32(
+    [
+        [self.WIDTH // 2 - 60, 450],
+        [self.WIDTH // 2 + 60, 450],
+        [100, self.HEIGHT],
+        [self.WIDTH - 100, self.HEIGHT],
+    ]
+)
+
+self.__dst = dst = np.float32(
+    [
+        [self.offset, self.offset],
+        [self.WIDTH - self.offset, self.offset],
+        [self.offset, self.HEIGHT],
+        [self.WIDTH - self.offset, self.HEIGHT],
+    ]
+)
 ```
 
 This resulted in the following source and destination points:
 
-| Source        | Destination   | 
-|:-------------:|:-------------:| 
-| 585, 460      | 320, 0        | 
-| 203, 720      | 320, 720      |
-| 1127, 720     | 960, 720      |
-| 695, 460      | 960, 0        |
+| Source        | Destination   |
+|:-------------:|:-------------:|
+| 580, 450      | 200, 200        |
+| 700, 450      | 1080, 200      |
+| 100, 720     | 200, 720      |
+| 1180, 720      | 1080, 720        |
 
-I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
+<p float="center">
+    <img src="./output_images/undistorted_img_straight_lines1.jpg" width="400" />
+    <img src="./output_images/transformed_img_straight_lines1.jpg" width="400" />
+</p>
 
-![alt text][image4]
+#### 3. Color transformation and thresholding
+I used a combination of color and gradient thresholds, which are summed up in the script filtering.py of [image_processing](./image_processing) module
+to generate a binary image.
+I apply thresholding on HSV color space to get yellowish pixels, and also apply thresholding on RGB color space to obtain whiteish pixels. This process can be seen in [thresholding_on_color](./image_processing/filtering.py#L66-L75) method of [filtering.py](./image_processing/filtering.py) script.
+I further transform the image into HLS color space, and apply sobel filter on S channel image, then apply thresholding on the filtered image. This can be seen in [line 84-85 of filtering.py script](./image_processing/filtering.py#L84-L85).
 
-#### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
+Finally, I combine all the thresholding result with OR operator to get one of the following results:
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+<p float="center">
+    <img src="./output_images/undistorted_img_straight_lines1.jpg" width="400" />
+    <img src="./output_images/thresholded_img_straight_lines1.jpg" width="400" />
+</p>
 
-![alt text][image5]
+#### 4. Polynomial fitting
 
-#### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
+The polynomial fitting process of a single image can be seen in [line 62-163 of lane_line_detector.py](./lane_line_detector.py#L62-L163).
+The underlying algorithms can be described roughly as following:
+- calculate histogram of pixels on binary thresholded warped image.
+- find the local maximal on the left and right side of the histogram.
+- use multiple sliding windows to collect non-zero pixels to form 2 group of non-zero pixels on the left and right side of the image.
+- fit a polynomial on each of the group of non-zero pixels to find the line model on the left and the right
 
-I did this in lines # through # in my code in `my_other_file.py`
+The following images show the non-zero pixels, sliding windows and the fitted lines.
 
-#### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
+<p float="center">
+    <img src="./test_images/straight_lines1.jpg" width="300" />
+    <img src="./output_images/sliding_windows_straight_lines1.jpg" width="300" />
+</p>
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+The process of fitting polynomial on a sequence of frames (video) can be fastened using the fitted line model of the previous frame as prior. Here, without using sliding windows, we find non-zero pixels at the regions around the fitted line (of the previous frames) defined by a margin. After finding two group of non-zero pixels on the left and the right using this method, we again fit a polynomial on the newly found non-zero pixels. This can be seen in the [fit_polynomial_with_prior](./lane_line_detector.py#L165) method of lane_line_detector.
 
-![alt text][image6]
+#### 5. Calculation of the radius of curvature of the lane and the position of the vehicle with respect to center
+
+I did this in [estimate_lane_parameters](./lane_line_detector.py#L224) method of LaneLineDetector class.
+I use a second order polynomial curve to fit the lane pixels, which can be expressed as:
+```
+f(y) = A * y^2 + B * y + C
+```
+The radius of curvature hence can be calculated as:
+```
+R_{curve} = (1 + (2 * A * y + B) ^ 2) ^ (3 / 2) / |2 * A|
+```
+I calculate the radius of curvature on the left and right side of the image then use the average value of the two as the radius of curvature of the road.
+For the position of the ego vehicle, I calculate the x coordinates of the two curves at the maximum y. The x coordinate of the ego vehicle then be represented by the average value of these two x coordinates of the two curves. Comparing the x coordinate of the ego vehicle and the center point (of the image) gives us the information about whether the ego vehicle is on the left or the right.
+
+#### 6. Final result
+
+The visualization of the final result can be observed in the [visualize_result](./lane_line_detector.py#L251) method of LaneLineDetector class.
+The final results for the test images are as following:
+
+<p float="center">
+    <img src="./output_images/final_result_straight_lines1.jpg" width="400" />
+    <img src="./output_images/final_result_straight_lines2.jpg" width="400" />
+</p>
+<p float="center">
+    <img src="./output_images/final_result_test1.jpg" width="400" />
+    <img src="./output_images/final_result_test2.jpg" width="400" />
+</p>
+<p float="center">
+    <img src="./output_images/final_result_test3.jpg" width="400" />
+    <img src="./output_images/final_result_test4.jpg" width="400" />
+</p>
+<p float="center">
+    <img src="./output_images/final_result_test5.jpg" width="400" />
+    <img src="./output_images/final_result_test6.jpg" width="400" />
+</p>
 
 ---
 
 ### Pipeline (video)
 
-#### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
+#### 1. Pipeline for the video
 
-Here's a [link to my video result](./project_video.mp4)
+The pipeline for the test video can be seen in the 13th cells of lane_line_pipeline.ipynb notebook.
+Note that for the video, I only used the sliding window technique for the first frame of the video. For the following frames, I use the previously fitted curve model as a prior to find the new non-zero pixels.
+
+Here's an example: [link to my video result](./output_videos/output_project_video.mp4)
 
 ---
 
 ### Discussion
 
-#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
-
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+This pipeline for lane line detection works with a lot of heuristic information from the thresholding values to chosen source and destination points for image warping, which luckily works on the first basic test video.
+For the challenge videos, the existence of shadow on the road, obstacle ahead (the driver), complicated structure of the curve (which a second order polynomial can not represent) make it very hard for the current approach to work robustly.
+Further image processing technique like shadow removing, bezier/ b spline curve fitting, or ultimately yreal-world recognition with deep learning (that is briefly introduced in the lession) should be applied for the autonomous driving system to become reliable and workable.
